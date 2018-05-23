@@ -31,13 +31,12 @@
     "test:watch": "jest -i --watch"
   },
   "dependencies": {
-    "@nearform/trail-core": "^1.0.1"
+    "@nearform/trail-core": "^1.0.1",
+    "@nearform/trail-hapi-plugin": "^1.0.1"
   },
   "devDependencies": {
-    "@nearform/trail-hapi-plugin": "^1.0.1",
     "@nearform/udaru-core": "^5.1.0",
     "@nearform/udaru-hapi-plugin": "^5.2.0",
-    "@nearform/udaru-hapi-server": "^5.2.0",
     "depcheck": "^0.6.9",
     "hapi": "^17.5.0",
     "husky": "^1.0.0-rc.2",
