@@ -22,7 +22,7 @@ before_script:
   - psql -c 'create database "authorization";' -U postgres
   - npm install
   - cd node_modules/@nearform/udaru-core && npm run pg:init-test-db
-  - cd node_modules/@nearform/trail-core && npm run pg:travis:init
+  - cd ../trail-core && npm run pg:travis:init
 
 script:
   - lerna run sanity
