@@ -25,4 +25,4 @@ before_script:
 
 
 script:
-  - lerna run sanity
+  - npm run sanity
