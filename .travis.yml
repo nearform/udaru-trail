@@ -1,0 +1,28 @@
+language: node_js
+
+node_js:
+  - '8'
+  - '10'
+
+dist: trusty
+sudo: required
+
+env:
+  global:
+  - NODE_ENV=travis
+  - UDARU_SERVICE_pgdb_password=''
+
+addons:
+  postgresql: "9.6"
+services:
+  - postgresql
+
+before_script:
+  - psql -c 'create database "trails_test";' -U postgres
+  - psql -c 'create database "authorization";' -U postgres
+  - lerna bootstrap
+  - cd node_modules/@nearform/udaru-core && pg:init-test-db
+  - npm run pg:travis:init
+
+script:
+  - lerna run sanity
