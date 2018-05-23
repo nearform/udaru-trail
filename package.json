@@ -1,7 +1,7 @@
 {
   "name": "@nearform/udaru-trail",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "udaru-trail integration service",
   "license": "MIT",
   "author": "nearForm Ltd",
@@ -34,8 +34,12 @@
     "@nearform/trail-core": "^1.0.1"
   },
   "devDependencies": {
+    "@nearform/trail-hapi-plugin": "^1.0.1",
     "@nearform/udaru-core": "^5.1.0",
+    "@nearform/udaru-hapi-plugin": "^5.2.0",
+    "@nearform/udaru-hapi-server": "^5.2.0",
     "depcheck": "^0.6.9",
+    "hapi": "^17.5.0",
     "husky": "^1.0.0-rc.2",
     "jest": "^22.4.3",
     "lodash": "^4.17.10",
@@ -43,7 +47,8 @@
     "remark-cli": "^5.0.0",
     "remark-lint": "^6.0.1",
     "remark-preset-lint-recommended": "^3.0.1",
-    "standard": "^11.0.1"
+    "standard": "^11.0.1",
+    "uuid": "^3.2.1"
   },
   "remarkConfig": {
     "plugins": [

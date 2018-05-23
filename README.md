@@ -20,6 +20,27 @@ const trailInstance = new TrailsManager()
 register(udaruInstance, trailInstance, ['authorize:isUserAuthorized'])
 ```
 
+## Integrating into udaru and HAPI
+
+Integration is supported via [udaru-hapi-plugin][udaru-hapi-plugin].
+
+Register the `UdaruTrailHapiPlugin` after `UdaruPlugin` and after `TrailPlugin` and **BEFORE** starting the server:
+
+```javascript
+const TrailPlugin = require('@nearform/trail-hapi-plugin')
+const UdaruPlugin = require('@nearform/udaru-hapi-plugin')
+const { UdaruTrailHapiPlugin } = require('@nearform/udaru-trail')
+const Hapi = require('hapi')
+
+const server = Hapi.Server({port: 3000})
+
+await this.server.register({plugin: UdaruPlugin})
+await this.server.register({plugin: TrailPlugin})
+await this.server.register({plugin: UdaruTrailHapiPlugin})
+
+await this.server.start()
+```
+
 ## Testing, benching & linting
 
 Before running tests, make sure you have a working test environment for both udaru-core and trail-core packages.
@@ -58,4 +79,5 @@ Copyright nearForm Ltd 2018. Licensed under [MIT][license].
 [npm-badge]: https://img.shields.io/npm/v/@nearform/udaru-trail.svg
 [trail]: https://github.com/nearform/trail
 [udaru]: https://github.com/nearform/udaru
+[udaru-hapi-plugin]: https://github.com/nearform/udaru/tree/master/packages/udaru-hapi-plugin
 [license]: ./LICENSE.md

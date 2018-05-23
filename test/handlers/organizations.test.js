@@ -1,3 +1,5 @@
+'use strict'
+
 const { DateTime } = require('luxon')
 const { bootstrap, beforeEachHandler, afterEachHandler, checkHandlers } = require('./utils')
 

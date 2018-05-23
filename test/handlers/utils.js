@@ -1,3 +1,5 @@
+'use strict'
+
 const udaru = require('@nearform/udaru-core')
 const { TrailsManager } = require('@nearform/trail-core')
 const { register } = require('../../lib')
@@ -16,8 +18,12 @@ module.exports = {
   },
 
   async afterEachHandler () {
-    await this.udaru.db.close()
-    await this.trail.close()
+    try {
+      await Promise.all([this.udaru.db.close(), this.trail.close()])
+    } catch (e) {
+      console.log(e)
+      // No-op
+    }
   },
 
   async checkHandlers (checks) {

@@ -1,3 +1,5 @@
+'use strict'
+
 const { DateTime } = require('luxon')
 const { bootstrap, beforeEachHandler, afterEachHandler, checkHandlers } = require('./utils')
 
@@ -8,7 +10,7 @@ describe('authorization hooks', () => {
     beforeEachHandler.call(this)
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     return afterEachHandler.call(this)
   })
 
