@@ -1,123 +1,124 @@
 'use strict'
 
-const { DateTime } = require('luxon')
-const { bootstrap, beforeEachHandler, afterEachHandler, checkHandlers } = require('./utils')
+const { checkHandler, lab } = require('./_setup')()
+const { v4: uuid } = require('uuid')
+const { describe, it: test } = lab
+
+module.exports.lab = lab
 
 describe('authorization hooks', () => {
-  beforeEach(async () => {
-    await bootstrap.call(this)
+  const resource = uuid()
+  const action = uuid()
+  const user = uuid()
+  const organization = uuid()
 
-    beforeEachHandler.call(this)
-  })
-
-  afterEach(async () => {
-    return afterEachHandler.call(this)
-  })
-
-  const checks = [
-    [
+  test('- authorization:isUserAuthorized', () => {
+    return checkHandler(
       'authorize.isUserAuthorized',
       {
-        resource: 'RESOURCE',
-        action: 'ACTION',
-        userId: 'USER',
-        organizationId: 'ORGANIZATION',
+        resource: resource,
+        action: action,
+        userId: user,
+        organizationId: organization,
         sourceIpAddress: '127.0.0.1',
         sourcePort: '3000'
       },
       {
-        when: expect.any(DateTime),
         who: {
-          id: 'ORGANIZATION/USER',
-          user: 'USER',
-          organization: 'ORGANIZATION'
+          id: `${organization}/${user}`,
+          user,
+          organization
         },
         what: 'authorization:isUserAuthorized',
-        subject: { id: 'RESOURCE', action: 'ACTION' },
+        subject: { id: resource, action },
         where: { ip: '127.0.0.1', port: '3000' },
         meta: {
           result: { access: false }
         }
       }
-    ],
-    [
+    )
+  })
+
+  test('- authorization:batchAuthorization', () => {
+    return checkHandler(
       'authorize.batchAuthorization',
       {
-        resourceBatch: [{ resource: 'RESOURCE', action: 'ACTION' }],
-        userId: 'USER',
-        organizationId: 'ORGANIZATION',
+        resourceBatch: [{ resource: resource, action }],
+        userId: user,
+        organizationId: organization,
         sourceIpAddress: '127.0.0.1',
         sourcePort: '3000'
       },
       {
-        when: expect.any(DateTime),
         who: {
-          id: 'ORGANIZATION/USER',
-          user: 'USER',
-          organization: 'ORGANIZATION'
+          id: `${organization}/${user}`,
+          user,
+          organization
         },
         what: 'authorization:batchAuthorization',
         subject: {
-          batch: [{ resource: 'RESOURCE', action: 'ACTION', access: false }]
+          batch: [{ resource: resource, action, access: false }]
         },
         where: {
           ip: '127.0.0.1',
           port: '3000'
         },
         meta: {
-          result: [{ resource: 'RESOURCE', action: 'ACTION', access: false }]
+          result: [{ resource: resource, action, access: false }]
         }
       }
-    ],
-    [
+    )
+  })
+
+  test('- authorization:listActions', () => {
+    return checkHandler(
       'authorize.listActions',
       {
-        resource: 'RESOURCE',
-        userId: 'USER',
-        organizationId: 'ORGANIZATION',
+        resource: resource,
+        userId: user,
+        organizationId: organization,
         sourceIpAddress: '127.0.0.1',
         sourcePort: '3000'
       },
       {
-        when: expect.any(DateTime),
         who: {
-          id: 'ORGANIZATION/USER',
-          user: 'USER',
-          organization: 'ORGANIZATION'
+          id: `${organization}/${user}`,
+          user,
+          organization
         },
         what: 'authorization:listActions',
-        subject: 'RESOURCE',
+        subject: resource,
         where: { ip: '127.0.0.1', port: '3000' },
         meta: {
           result: { actions: [] }
         }
       }
-    ],
-    [
+    )
+  })
+
+  test('- authorization:listAuthorizationsOnResources', () => {
+    return checkHandler(
       'authorize.listAuthorizationsOnResources',
       {
-        resources: ['RESOURCE'],
-        userId: 'USER',
-        organizationId: 'ORGANIZATION',
+        resources: [resource],
+        userId: user,
+        organizationId: organization,
         sourceIpAddress: '127.0.0.1',
         sourcePort: '3000'
       },
       {
-        when: expect.any(DateTime),
         who: {
-          id: 'ORGANIZATION/USER',
-          user: 'USER',
-          organization: 'ORGANIZATION'
+          id: `${organization}/${user}`,
+          user,
+          organization
         },
         what: 'authorization:listAuthorizationsOnResources',
-        subject: { resources: ['RESOURCE'] },
+        subject: { resources: [resource] },
         where: { ip: '127.0.0.1', port: '3000' },
         meta: {
-          result: [{ actions: [], resource: 'RESOURCE' }]
+          result: [{ actions: [], resource: resource }]
         }
       }
-    ]
-  ]
-
-  checkHandlers.call(this, checks)
+    )
+  })
 })

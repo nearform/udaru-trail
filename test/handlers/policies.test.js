@@ -1,136 +1,136 @@
 'use strict'
 
-const { DateTime } = require('luxon')
-const { bootstrap, beforeEachHandler, afterEachHandler, checkHandlers } = require('./utils')
+const context = require('./_setup')()
+const { v4: uuid } = require('uuid')
+const { describe, it: test } = context.lab
+
+module.exports.lab = context.lab
+
+async function setupModels () {
+  const organizationId = uuid()
+  const userId = uuid()
+  const policyId = uuid()
+  const sharedPolicyId = uuid()
+
+  await context.udaru.organizations.create({
+    id: organizationId,
+    name: 'NAME',
+    description: 'DESCRIPTION',
+    metadata: { a: '1' },
+    user: {
+      id: userId,
+      name: 'NAME'
+    }
+  })
+
+  await context.udaru.policies.create({
+    id: policyId,
+    version: '1',
+    name: 'NAME',
+    organizationId,
+    statements: {
+      Statement: [{ Effect: 'Allow', Action: ['documents:Read'], Resource: ['*'] }]
+    }
+  })
+
+  await context.udaru.policies.createShared({
+    id: sharedPolicyId,
+    version: '1',
+    name: 'NAME',
+    statements: {
+      Statement: [{ Effect: 'Allow', Action: ['documents:Read'], Resource: ['*'] }]
+    }
+  })
+
+  return { organizationId, userId, policyId, sharedPolicyId }
+}
 
 describe('policies hooks', () => {
-  beforeEach(async () => {
-    await bootstrap.call(this)
+  test('- policy:create', async () => {
+    const policyId = uuid()
+    const { organizationId } = await setupModels()
 
-    await this.udaru.organizations.create({
-      id: 'ORGANIZATION',
-      name: 'NAME',
-      description: 'DESCRIPTION',
-      metadata: { a: '1' },
-      user: {
-        id: 'USER',
-        name: 'NAME'
-      }
-    })
-
-    await this.udaru.policies.create({
-      id: 'POLICY',
-      version: '1',
-      name: 'NAME',
-      organizationId: 'ORGANIZATION',
-      statements: {
-        Statement: [{ Effect: 'Allow', Action: ['documents:Read'], Resource: ['*'] }]
-      }
-    })
-
-    await this.udaru.policies.createShared({
-      id: 'SHARED-POLICY',
-      version: '1',
-      name: 'NAME',
-      statements: {
-        Statement: [{ Effect: 'Allow', Action: ['documents:Read'], Resource: ['*'] }]
-      }
-    })
-
-    return beforeEachHandler.call(this)
-  })
-
-  afterEach(async () => {
-    try {
-      await Promise.all([
-        this.udaru.policies.delete({ id: 'POLICY', organizationId: 'ORGANIZATION' }),
-        this.udaru.policies.delete({ id: 'POLICY-2', organizationId: 'ORGANIZATION' }),
-        this.udaru.policies.deleteShared({ id: 'SHARED-POLICY' }),
-        this.udaru.policies.deleteShared({ id: 'SHARED-POLICY-2' })
-      ])
-    } catch (e) {
-      // No-op
-    }
-
-    try {
-      await Promise.all([this.udaru.organizations.delete('ORGANIZATION')])
-    } catch (e) {
-      // No-op
-    }
-
-    return afterEachHandler.call(this)
-  })
-
-  const checks = [
-    [
+    return context.checkHandler(
       'policies.create',
       {
-        id: 'POLICY-2',
+        id: policyId,
         version: '1',
         name: 'NAME',
-        organizationId: 'ORGANIZATION',
+        organizationId,
         statements: {
           Statement: [{ Effect: 'Allow', Action: ['documents:Read'], Resource: ['*'] }]
         }
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'policy:create',
         subject: {
-          id: 'POLICY-2',
+          id: policyId,
           version: '1',
           name: 'NAME',
-          organizationId: 'ORGANIZATION',
+          organizationId,
           statements: {
             Statement: [{ Effect: 'Allow', Action: ['documents:Read'], Resource: ['*'] }]
           }
         }
       }
-    ],
-    [
+    )
+  })
+
+  test('- policy:update', async () => {
+    const { policyId, organizationId } = await setupModels()
+
+    return context.checkHandler(
       'policies.update',
       {
-        id: 'POLICY',
+        id: policyId,
         version: '1',
         name: 'NAME',
-        organizationId: 'ORGANIZATION',
+        organizationId,
         statements: {
           Statement: [{ Effect: 'Allow', Action: ['documents:Read'], Resource: ['*'] }]
         }
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'policy:update',
         subject: {
-          id: 'POLICY',
+          id: policyId,
           version: '1',
           name: 'NAME',
-          organizationId: 'ORGANIZATION',
+          organizationId,
           statements: {
             Statement: [{ Effect: 'Allow', Action: ['documents:Read'], Resource: ['*'] }]
           }
         }
       }
-    ],
-    [
+    )
+  })
+
+  test('- policy:delete', async () => {
+    const { policyId, organizationId } = await setupModels()
+
+    return context.checkHandler(
       'policies.delete',
       {
-        id: 'POLICY',
-        organizationId: 'ORGANIZATION'
+        id: policyId,
+        organizationId
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'policy:delete',
-        subject: { id: 'POLICY', organizationId: 'ORGANIZATION' }
+        subject: { id: policyId, organizationId }
       }
-    ],
-    [
+    )
+  })
+
+  test('- policy:createShared', () => {
+    const sharedPolicyId = uuid()
+
+    return context.checkHandler(
       'policies.createShared',
       {
-        id: 'SHARED-POLICY-2',
+        id: sharedPolicyId,
         version: '1',
         name: 'NAME',
         statements: {
@@ -138,11 +138,10 @@ describe('policies hooks', () => {
         }
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'policy:createShared',
         subject: {
-          id: 'SHARED-POLICY-2',
+          id: sharedPolicyId,
           version: '1',
           name: 'NAME',
           statements: {
@@ -150,11 +149,16 @@ describe('policies hooks', () => {
           }
         }
       }
-    ],
-    [
+    )
+  })
+
+  test('- policy:updateShared', async () => {
+    const { sharedPolicyId } = await setupModels()
+
+    return context.checkHandler(
       'policies.updateShared',
       {
-        id: 'SHARED-POLICY',
+        id: sharedPolicyId,
         version: '1',
         name: 'NAME',
         statements: {
@@ -162,11 +166,10 @@ describe('policies hooks', () => {
         }
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'policy:updateShared',
         subject: {
-          id: 'SHARED-POLICY',
+          id: sharedPolicyId,
           version: '1',
           name: 'NAME',
           statements: {
@@ -174,20 +177,22 @@ describe('policies hooks', () => {
           }
         }
       }
-    ],
-    [
+    )
+  })
+
+  test('- policy:deleteShared', async () => {
+    const { sharedPolicyId } = await setupModels()
+
+    return context.checkHandler(
       'policies.deleteShared',
       {
-        id: 'SHARED-POLICY'
+        id: sharedPolicyId
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'policy:deleteShared',
-        subject: { id: 'SHARED-POLICY' }
+        subject: { id: sharedPolicyId }
       }
-    ]
-  ]
-
-  checkHandlers.call(this, checks)
+    )
+  })
 })

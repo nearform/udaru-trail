@@ -1,6 +1,8 @@
 # @nearform/udaru-trail
 
 [![npm][npm-badge]][npm-url]
+[![travis][travis-badge]][travis-url]
+[![coveralls][coveralls-badge]][coveralls-url]
 
 udaru-trail is a small package which adds [trail][trail] auditing capabilities to [udaru][udaru] via its hooks.
 
@@ -77,6 +79,10 @@ Copyright nearForm Ltd 2018. Licensed under [MIT][license].
 
 [npm-url]: https://npmjs.org/package/@nearform/udaru-trail
 [npm-badge]: https://img.shields.io/npm/v/@nearform/udaru-trail.svg
+[travis-badge]: https://travis-ci.org/nearform/udaru-trail.svg?branch=master
+[travis-url]: https://travis-ci.org/nearform/udaru-trail
+[coveralls-badge]: https://coveralls.io/repos/nearform/udaru-trail/badge.svg?branch=master&service=github
+[coveralls-url]: https://coveralls.io/github/nearform/udaru-trail?branch=master
 [trail]: https://github.com/nearform/trail
 [udaru]: https://github.com/nearform/udaru
 [udaru-hapi-plugin]: https://github.com/nearform/udaru/tree/master/packages/udaru-hapi-plugin

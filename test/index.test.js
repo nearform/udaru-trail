@@ -1,5 +1,11 @@
 'use strict'
 
+const { expect } = require('code')
+const Lab = require('lab')
+module.exports.lab = Lab.script()
+const { describe, it: test, beforeEach, afterEach } = module.exports.lab
+const sinon = require('sinon')
+
 const TrailPlugin = require('@nearform/trail-hapi-plugin')
 const { TrailsManager } = require('@nearform/trail-core')
 const UdaruPlugin = require('@nearform/udaru-hapi-plugin')
@@ -11,45 +17,37 @@ const uuid = require('uuid')
 
 describe('main', () => {
   test('it should use provided TrailsManager', async () => {
-    const udaru = { hooks: { add: jest.fn() } }
+    const udaru = { hooks: { add: sinon.spy() } }
     const trail = new TrailsManager()
     const res = register(udaru, trail, ['authorization:isUserAuthorized'])
 
-    expect(res).toMatchObject({
+    expect(res).include({
       udaru
     })
 
-    expect(res.trail).toBe(trail)
-    expect(res.udaru.hooks.add).toHaveBeenCalledTimes(1)
+    expect(res.trail).to.equal(trail)
+    expect(res.udaru.hooks.add.callCount).to.equal(1)
 
     await trail.close()
   })
 
   test('it should create a new TrailsManager if options were provided', async () => {
-    const udaru = { hooks: { add: jest.fn() } }
-    const res = register(udaru, { logger: 'LOGGER' })
+    const udaru = { hooks: { add: sinon.spy() } }
+    const res = register(udaru, { logger: 'LOGGER' }, null)
 
-    expect(res).toMatchObject({
-      udaru,
-      trail: expect.any(TrailsManager)
-    })
-
-    expect(res.trail.logger).toEqual('LOGGER')
-    expect(res.udaru.hooks.add).not.toHaveBeenCalledTimes(1)
+    expect(res.trail).to.be.instanceof(TrailsManager)
+    expect(res.trail.logger).to.equal('LOGGER')
+    expect(res.udaru.hooks.add.called).to.be.least(1)
 
     await res.trail.close()
   })
 
   test('it should create a new TrailsManager if nothing provided', async () => {
-    const udaru = { hooks: { add: jest.fn() } }
+    const udaru = { hooks: { add: sinon.spy() } }
     const res = register(udaru)
 
-    expect(res).toMatchObject({
-      udaru,
-      trail: expect.any(TrailsManager)
-    })
-
-    expect(res.udaru.hooks.add).not.toHaveBeenCalledTimes(1)
+    expect(res.trail).to.be.instanceof(TrailsManager)
+    expect(res.udaru.hooks.add.called).to.be.least(1)
 
     await res.trail.close()
   })
@@ -57,100 +55,102 @@ describe('main', () => {
 
 describe('.log', () => {
   test('should insert into trail when the caller succeeded', async () => {
-    const insert = jest.fn()
+    const insert = sinon.spy()
     const instance = log({ insert }, (args, result) => ({ who: 'ARGS' }))
 
     await instance()
-    expect(insert).toHaveBeenCalledWith({
-      when: expect.any(DateTime),
-      who: 'ARGS'
-    })
+
+    expect(
+      insert.withArgs({
+        when: sinon.match.instanceOf(DateTime),
+        who: 'ARGS'
+      }).called
+    ).to.be.true()
   })
 
   test('should not do anything when the caller failed', async () => {
-    const insert = jest.fn()
+    const insert = sinon.spy()
     const instance = log({ insert }, (args, result) => [1, 2])
 
     await instance(new Error('ERROR'))
-    expect(insert).not.toHaveBeenCalled()
+    expect(insert.called).to.be.false()
   })
 })
 
-describe('Hapi integration', () => {
-  describe('via udaru-hapi-plugin and trail-hapi-plugin', async () => {
-    beforeEach(async () => {
-      this.server = Hapi.Server({
-        port: 3000,
-        host: 'localhost',
-        debug: false
-      })
-
-      this.trail = new TrailsManager()
-      this.insertionSpy = jest.spyOn(this.trail, 'insert')
-
-      await this.server.register(UdaruPlugin)
-      await this.server.register(TrailPlugin)
-      await this.server.register(UdaruTrailHapiPlugin)
-
-      this.server.ext('onPostStop', () => {
-        return this.server.udaru.db.close()
-      })
-
-      await this.server.start()
+describe('Hapi integration via udaru-hapi-plugin and trail-hapi-plugin', async () => {
+  beforeEach(async () => {
+    this.server = Hapi.Server({
+      port: 3000,
+      host: 'localhost',
+      debug: false
     })
 
-    afterEach(() => {
-      return Promise.all([this.trail.close(), this.server.stop()])
+    this.trail = new TrailsManager()
+    this.insertionSpy = sinon.spy(this.trail, 'insert')
+
+    await this.server.register(UdaruPlugin)
+    await this.server.register(TrailPlugin)
+    await this.server.register(UdaruTrailHapiPlugin)
+
+    this.server.ext('onPostStop', () => {
+      return this.server.udaru.db.close()
     })
 
-    test('should record trails for udaru calls', async () => {
-      const who = uuid.v4()
+    await this.server.start()
+  })
 
-      const options = {
-        method: 'GET',
-        url: `/authorization/access/${who}/ACTION/RESOURCE`,
-        headers: {
-          authorization: 'ROOTid',
-          org: 'ORGANIZATION'
-        }
+  afterEach(() => {
+    return Promise.all([this.trail.close(), this.server.stop()])
+  })
+
+  test('should record trails for udaru calls', async () => {
+    const who = uuid.v4()
+
+    const options = {
+      method: 'GET',
+      url: `/authorization/access/${who}/ACTION/RESOURCE`,
+      headers: {
+        authorization: 'ROOTid',
+        org: 'ORGANIZATION'
       }
+    }
 
-      const response = await this.server.inject(options)
-      const result = response.result
+    const response = await this.server.inject(options)
+    const result = response.result
 
-      expect(response.statusCode).toEqual(200)
-      expect(result).toEqual({ access: false })
+    expect(response.statusCode).to.equal(200)
+    expect(result).to.equal({ access: false })
 
-      const records = await this.trail.search({
-        from: DateTime.utc().minus({ years: 1 }),
-        to: DateTime.utc().plus({ years: 1 }),
-        who
-      })
+    const records = await this.trail.search({
+      from: DateTime.utc().minus({ years: 1 }),
+      to: DateTime.utc().plus({ years: 1 }),
+      who
+    })
 
-      expect(records[0]).toEqual({
-        id: expect.any(Number),
-        when: expect.any(DateTime),
-        who: {
-          id: `ORGANIZATION/${who}`,
-          attributes: {
-            user: who,
-            organization: 'ORGANIZATION'
-          }
-        },
-        what: {
-          id: 'authorization:isUserAuthorized',
-          attributes: {}
-        },
-        subject: {
-          id: 'RESOURCE',
-          attributes: { action: 'ACTION' }
-        },
-        where: { ip: '127.0.0.1', port: '' },
-        why: {},
-        meta: {
-          result: { access: false }
+    expect(records[0].id).to.be.number()
+    expect(records[0].when).to.be.instanceOf(DateTime)
+
+    expect(records[0]).to.include({
+      who: {
+        id: `ORGANIZATION/${who}`,
+        attributes: {
+          user: who,
+          organization: 'ORGANIZATION'
         }
-      })
+      },
+      what: {
+        id: 'authorization:isUserAuthorized',
+        attributes: {}
+      },
+      subject: {
+        id: 'RESOURCE',
+        attributes: { action: 'ACTION' }
+      },
+      where: { ip: '127.0.0.1', port: '' },
+      why: {},
+      meta: {
+        result: { access: false }
+      }
     })
   })
 })

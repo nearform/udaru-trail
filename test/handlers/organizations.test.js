@@ -1,181 +1,192 @@
 'use strict'
 
-const { DateTime } = require('luxon')
-const { bootstrap, beforeEachHandler, afterEachHandler, checkHandlers } = require('./utils')
+const context = require('./_setup')()
+const { v4: uuid } = require('uuid')
+const { describe, it: test } = context.lab
+
+module.exports.lab = context.lab
+
+async function setupModels () {
+  const organizationId = uuid()
+  const userId = uuid()
+  const policyId = uuid()
+
+  await context.udaru.organizations.create({
+    id: organizationId,
+    name: 'NAME',
+    description: 'DESCRIPTION',
+    metadata: { a: '1' },
+    user: {
+      id: userId,
+      name: 'NAME'
+    }
+  })
+
+  await context.udaru.policies.create({
+    id: policyId,
+    version: '1',
+    name: 'NAME',
+    organizationId: organizationId,
+    statements: {
+      Statement: [{ Effect: 'Allow', Action: ['documents:Read'], Resource: ['*'] }]
+    }
+  })
+
+  return { organizationId, userId, policyId }
+}
 
 describe('organization hooks', () => {
-  beforeEach(async () => {
-    await bootstrap.call(this)
+  test('- organization:create', () => {
+    const organizationId = uuid()
+    const userId = uuid()
 
-    await this.udaru.organizations.create({
-      id: 'ID',
-      name: 'NAME',
-      description: 'DESCRIPTION',
-      metadata: { a: '1' },
-      user: {
-        id: 'USER',
-        name: 'NAME'
-      }
-    })
-
-    await this.udaru.policies.create({
-      id: 'POLICY',
-      version: '1',
-      name: 'NAME',
-      organizationId: 'ID',
-      statements: {
-        Statement: [{ Effect: 'Allow', Action: ['documents:Read'], Resource: ['*'] }]
-      }
-    })
-
-    return beforeEachHandler.call(this)
-  })
-
-  afterEach(async () => {
-    try {
-      await Promise.all([
-        this.udaru.policies.delete({ id: 'POLICY', organizationId: 'ID' }),
-        this.udaru.users.delete({ id: 'USER', organizationId: 'ID' }),
-        this.udaru.users.delete({ id: 'USER-2', organizationId: 'ID-2' })
-      ])
-    } catch (e) {
-      // No-op
-    }
-
-    try {
-      await Promise.all([this.udaru.organizations.delete('ID'), this.udaru.organizations.delete('ID-2')])
-    } catch (e) {
-      // No-op
-    }
-
-    return afterEachHandler.call(this)
-  })
-
-  const checks = [
-    [
+    return context.checkHandler(
       'organizations.create',
       {
-        id: 'ID-2',
+        id: organizationId,
         name: 'NAME',
         description: 'DESCRIPTION',
         metadata: { a: '1' },
         user: {
-          id: 'USER-2',
+          id: userId,
           name: 'NAME'
         }
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'organization:create',
         subject: {
-          id: 'ID-2',
+          id: organizationId,
           name: 'NAME',
           description: 'DESCRIPTION',
           metadata: { a: '1' }
         }
       }
-    ],
-    [
+    )
+  })
+
+  test('- organization:update', async () => {
+    const { organizationId } = await setupModels()
+
+    return context.checkHandler(
       'organizations.update',
       {
-        id: 'ID',
+        id: organizationId,
         name: 'NAME',
         description: 'DESCRIPTION',
         metadata: { a: '1' }
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'organization:update',
         subject: {
-          id: 'ID',
+          id: organizationId,
           name: 'NAME',
           description: 'DESCRIPTION',
           metadata: { a: '1' }
         }
       }
-    ],
-    [
-      'organizations.delete',
-      'ID',
-      {
-        when: expect.any(DateTime),
-        who: 'root',
-        what: 'organization:delete',
-        subject: { id: 'ID' }
+    )
+  })
+
+  test('- organization:delete', async () => {
+    const { organizationId } = await setupModels()
+
+    return context.checkHandler('organizations.delete', organizationId, {
+      who: 'root',
+      what: 'organization:delete',
+      subject: {
+        id: organizationId
       }
-    ],
-    [
+    })
+  })
+
+  test('- organization:addPolicies', async () => {
+    const { organizationId, policyId } = await setupModels()
+
+    return context.checkHandler(
       'organizations.addPolicies',
       {
-        id: 'ID',
-        policies: [{ id: 'POLICY' }]
+        id: organizationId,
+        policies: [{ id: policyId }]
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'organization:addPolicies',
-        subject: { id: 'ID' },
-        meta: { policies: [{ id: 'POLICY', variables: {} }] }
+        subject: { id: organizationId },
+        meta: { policies: [{ id: policyId, variables: {} }] }
       }
-    ],
-    [
+    )
+  })
+
+  test('- organization:amendPolicies', async () => {
+    const { organizationId, policyId } = await setupModels()
+
+    return context.checkHandler(
       'organizations.amendPolicies',
       {
-        id: 'ID',
-        policies: [{ id: 'POLICY' }]
+        id: organizationId,
+        policies: [{ id: policyId }]
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'organization:amendPolicies',
-        subject: { id: 'ID' },
-        meta: { policies: [{ id: 'POLICY', variables: {} }] }
+        subject: { id: organizationId },
+        meta: { policies: [{ id: policyId, variables: {} }] }
       }
-    ],
-    [
+    )
+  })
+
+  test('- organization:replacePolicies', async () => {
+    const { organizationId, policyId } = await setupModels()
+
+    return context.checkHandler(
       'organizations.replacePolicies',
       {
-        id: 'ID',
-        policies: [{ id: 'POLICY' }]
+        id: organizationId,
+        policies: [{ id: policyId }]
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'organization:replacePolicies',
-        subject: { id: 'ID' },
-        meta: { policies: [{ id: 'POLICY', variables: {} }] }
+        subject: { id: organizationId },
+        meta: { policies: [{ id: policyId, variables: {} }] }
       }
-    ],
-    [
+    )
+  })
+
+  test('- organization:deletePolicies', async () => {
+    const { organizationId } = await setupModels()
+
+    return context.checkHandler(
       'organizations.deletePolicies',
       {
-        id: 'ID'
+        id: organizationId
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'organization:deletePolicies',
-        subject: { id: 'ID' }
+        subject: { id: organizationId }
       }
-    ],
-    [
+    )
+  })
+
+  test('- organization:deletePolicy', async () => {
+    const { organizationId, policyId } = await setupModels()
+
+    return context.checkHandler(
       'organizations.deletePolicy',
       {
-        id: 'ID',
-        policyId: 'POLICY',
+        id: organizationId,
+        policyId: policyId,
         instance: 1
       },
       {
-        when: expect.any(DateTime),
         who: 'root',
         what: 'organization:deletePolicy',
-        subject: { id: 'ID' },
-        meta: { policy: 'POLICY', instance: 1 }
+        subject: { id: organizationId },
+        meta: { policy: policyId, instance: 1 }
       }
-    ]
-  ]
-
-  checkHandlers.call(this, checks)
+    )
+  })
 })
